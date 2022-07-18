@@ -1,0 +1,52 @@
+version: '3.8'
+
+networks:
+  smartLab:
+    driver: bridge
+
+services:
+  mysqld:
+    build:
+      context: .
+    image: mysql:8.0.27
+    restart: unless-stopped
+    container_name: smartLabMySqlServ
+    volumes:
+      - data-volume:/var/lib/mysql
+    networks:
+      - smartLab
+    env_file: ./.env
+    ports:
+      - $MYSQLDB_LOCAL_PORT:$MYSQLDB_DOCKER_PORT
+    environment:
+      - MYSQL_ROOT_PASSWORD=$MYSQLDB_ROOT_PASSWORD
+      - MYSQL_DATABASE=$MYSQLDB_DATABASE
+  app:
+    depends_on:
+      - mysqld
+    build: .
+    restart: on-failure
+    ports:
+      - 8080:8080
+    networks:
+      - smartLab
+  keycloak:
+    image: quay.io/keycloak/keycloak:latest
+    environment:
+      DB_VENDOR: MYSQL
+      DB_ADDR: mysqld
+      DB_DATABASE: smartlab_keycloak
+      DB_USER: root
+      DB_PASSWORD: 123Stella
+      KEYCLOAK_USER: admin
+      KEYCLOAK_PASSWORD: root
+      # Uncomment the line below if you want to specify JDBC parameters. The parameter below is just an example, and it shouldn't be used in production without knowledge. It is highly recommended that you read the MySQL JDBC driver documentation in order to use it.
+      #JDBC_PARAMS: "connectTimeout=30000"
+    ports:
+      - 8090:8080
+    depends_on:
+      - mysqld
+    networks:
+      - smartLab
+volumes:
+  data-volume: null
